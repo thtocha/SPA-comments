@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Comment;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class CommentController extends Controller
 {
@@ -26,7 +27,8 @@ class CommentController extends Controller
             'user.home_page' => ['url', 'max:50'],
             'text' => ['required', 'string', 'max:500'],
             'file' => ['file|mimes:jpg,jpeg,png,gif|max:2048'],
-            'captcha' => ['required', 'captcha'],
+            //'captcha' => ['required', 'captcha'],
+
         ]);
 
         $userData = $request->input('user');
@@ -65,5 +67,16 @@ class CommentController extends Controller
             'name' => $user->name,
             'text' => $comment->text,
         ], 201);
+    }
+
+    public function getCaptchaImage()
+    {
+        $response = Http::get(url('/captcha'));
+
+        if ($response->successful()) {
+            return response()->json($response->json(), 200);
+        } else {
+            return response()->json(['error' => 'Failed to fetch captcha'], 500);
+        }
     }
 }
