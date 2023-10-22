@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Comment extends Model
 {
@@ -17,14 +18,11 @@ class Comment extends Model
 
     public $timestamps = true;
 
-    // Указываем формат даты и времени
     protected $dateFormat = 'Y-m-d H:i:s';
 
-    // Определяем, какие поля являются датами
-    protected $dates = ['created_at', 'updated_at'];
+    protected array $dates = ['created_at', 'updated_at'];
 
-
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }

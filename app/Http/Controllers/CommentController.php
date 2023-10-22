@@ -1,82 +1,61 @@
 <?php
 
 namespace App\Http\Controllers;
-use App\Models\User;
 use App\Models\Comment;
+use App\Models\File;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
-
+use Illuminate\Http\JsonResponse;
+use App\Models\User;
 class CommentController extends Controller
 {
-    public function index()
+    public function index(): JsonResponse
     {
         $comments = Comment::with('user')
             ->whereNull('parent_id')
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate(25);
+
 
         return response()->json($comments, 201);
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
 
-        $request->validate([
+        $validated = $request->validate([
             'user.name' => ['required', 'string', 'max:50'],
-            'user.email' => ['required', 'email', 'max:50'],
-            'user.home_page' => ['url', 'max:50'],
-            'text' => ['required', 'string', 'max:500'],
-            'file' => ['file|mimes:jpg,jpeg,png,gif|max:2048'],
-            //'captcha' => ['required', 'captcha'],
-
+            'user.email' => ['required', 'email', 'max:70'],
+            'user.home_page' => ['url', 'max:70'],
+            'text' => ['required', 'string', 'max:700'],
+            'file' => ['file', 'mimes:jpg,jpeg,png,gif', 'max:2048'],
+            'parent_id' => ['nullable', 'int']
+            //captcha
         ]);
 
-        $userData = $request->input('user');
-        $text = $request->input('text');
+        //crate comment
+        $comment = new Comment();
+        $comment->text = $validated['text'];
+        $comment->parent_id = $validated['parent_id'];
 
-        if (empty($userData) || empty($text)) {
-            return response()->json(['error' => 'Invalid data'], 400);
-        }
 
-        $user = User::where('email', $userData['email'])->first();
 
-        if (!$user) {
-            $user = new User;
-            $user->email = $userData['email'];
-        }
 
-        if (isset($userData['name'])) {
-            $user->name = $userData['name'];
-        }
 
-        if (isset($userData['home_page'])) {
-            $user->home_page = $userData['home_page'];
-        }
+        //get user or create new
+        $user = User::firstOrNew([
+            'name' => $validated['user']['name'],
+            'email' => $validated['user']['email'],
+            'home_page' => $validated['user']['home_page']
+        ]);
 
         $user->save();
 
-        $comment = new Comment;
-        $comment->user_id = $user->id;
-        $comment->text = $text;
+        //linking a comment to user
+        $comment->user()->associate($user);
+
         $comment->save();
 
-        return response()->json([
-            'user_id' => $user->id,
-            'email' => $user->email,
-            'home_page' => $user->home_page,
-            'name' => $user->name,
-            'text' => $comment->text,
-        ], 201);
+        return response()->json($comment, 201);
     }
 
-    public function getCaptchaImage()
-    {
-        $response = Http::get(url('/captcha'));
-
-        if ($response->successful()) {
-            return response()->json($response->json(), 200);
-        } else {
-            return response()->json(['error' => 'Failed to fetch captcha'], 500);
-        }
-    }
 }
