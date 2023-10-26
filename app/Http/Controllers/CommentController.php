@@ -6,31 +6,38 @@ use App\Models\File;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use App\Models\User;
-
+use Illuminate\Validation\Validator;
 
 class CommentController extends Controller
 {
-    public function index(): JsonResponse
+    public function index()
     {
+
         $comments = Comment::with('user')
             ->whereNull('parent_id')
             ->orderBy('created_at', 'desc')
             ->paginate(25);
 
-        return response()->json($comments, 201);
+//        return response()->json($comments, 201);
+        return view('pagination', ['comments' => $comments]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request): JsonResponse
     {
+        $key = $request->input('key');
+        if ($key === null) {
+            return response()->json(['message' => 'captcha key dont send'], 400);
+        }
 
-        $validated = $request->validate([
+        $rules = [
             'name' => ['required', 'string', 'max:50'],
             'email' => ['required', 'email', 'max:70'],
             'home_page' => ['url', 'max:70'],
             'text' => ['required', 'string', 'max:700'],
             'files.*' => ['file', 'mimes:jpg,jpeg,png,gif', 'max:2048'],
-            //captcha
-        ]);
+            'captcha' => ['required', 'captcha_api:' . request('key')]
+        ];
+        $validated = validator()->make(request()->all(), $rules)->validate();
 
         $comment = new Comment();
         $comment->text = $validated['text'];
